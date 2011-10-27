@@ -1,16 +1,23 @@
-words = Fiber.new do
-  File.foreach("testfile") do |line|
-    line.scan(/\w+/) do |word|
-      Fiber.yield word.downcase
-    end
+require 'thread'
+
+queue = Queue.new
+counts = Hash.new(0)
+
+File.foreach("testfile") do |line|
+  line.scan(/\w+/) do |word|
+    queue << word.downcase
+    puts "Adding word #{word.downcase}"
   end
 end
 
-counts = Hash.new(0)
-while word = words.resume
-  counts[word] += 1
+consumer = Thread.new do
+  while(!queue.empty?)
+    value = queue.pop
+    counts[value] += 1
+  end
+  counts.keys.sort.each {|k|
+    print "#{k}: #{counts[k]}; \t"
+  }
 end
 
-counts.keys.sort.each {|k|
-  print "#{k}: #{counts[k]}; \t"
-}
+consumer.join
